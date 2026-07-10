@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { View, StyleSheet, Pressable, ScrollView } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { ScreenHeader } from "../../src/components/ScreenHeader";
@@ -24,6 +25,7 @@ const LABELS = ["", "Poor", "Fair", "Good", "Great", "Excellent"];
 export default function Rate() {
   const { bookingId } = useLocalSearchParams();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const qc = useQueryClient();
   const submit = useSubmitRating();
 
@@ -51,7 +53,7 @@ export default function Rate() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <ScreenHeader title="Rate your service" />
-      <ScrollView contentContainerStyle={{ padding: spacing.xl, paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={{ padding: spacing.xl, paddingBottom: 40 + insets.bottom }} keyboardShouldPersistTaps="handled">
         <View style={{ alignItems: "center", marginVertical: spacing.xl }}>
           <Txt size={font.size.xl} weight={font.weight.heavy} center>How was it?</Txt>
           <Txt muted center style={{ marginTop: 6 }}>Your feedback keeps our crew elite.</Txt>

@@ -1,21 +1,20 @@
-import React from "react";
+import React, { useState } from "react";
 import { View, StyleSheet, ScrollView, Pressable } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { Logo } from "../src/components/Logo";
-import { CategoryIcon } from "../src/components/CategoryIcon";
+import { CategoryTile } from "../src/components/CategoryIcon";
 import { Button, Txt, Row, Card } from "../src/components/ui";
-import { markIntroSeen } from "../src/lib/onboarding";
 import { useLightStatusBar } from "../src/lib/useStatusBar";
-import { colors, spacing, font, radii, shadow, categoryMeta } from "../src/theme";
+import { colors, spacing, font, radii, shadow } from "../src/theme";
 
-// First-launch landing — explains what EliteCrew does, why to use it and every
-// service on offer, then lets the visitor explore freely (no login required).
-// Login is only ever requested later, at the moment of booking.
+// The "what EliteCrew does, why to use it, every service on offer" story.
+// Reached from Home via "Explore EliteCrew" — not a forced first screen, so
+// it needs its own close affordance rather than only forward-moving CTAs.
 
 const SERVICES = [
-  { key: "ac", label: "AC Repair & Service" },
+  { key: "ac", label: "AC Repair" },
   { key: "fridge", label: "Refrigerator" },
   { key: "cooler", label: "Air Cooler" },
   { key: "fan", label: "Fan & Motor" },
@@ -25,10 +24,10 @@ const SERVICES = [
 ];
 
 const WHY = [
-  { icon: "shield-checkmark", title: "Verified professionals", sub: "Background-checked, trained & rated experts at your door." },
-  { icon: "pricetag", title: "Upfront, honest pricing", sub: "See the full quote before you book — zero surprises." },
-  { icon: "flash", title: "Same-day service", sub: "Book in under a minute and get sorted today." },
-  { icon: "refresh", title: "30-day warranty", sub: "Every job is backed by our service guarantee." },
+  { icon: "shield-checkmark", title: "Verified professionals", sub: "Background-checked & trained" },
+  { icon: "pricetag", title: "Honest, upfront pricing", sub: "Full quote before you book" },
+  { icon: "flash", title: "Same-day service", sub: "Book now, get sorted today" },
+  { icon: "refresh", title: "30-day warranty", sub: "Every job, guaranteed" },
 ];
 
 const STATS = [
@@ -37,32 +36,78 @@ const STATS = [
   { value: "100%", label: "Verified" },
 ];
 
+const HOW = [
+  "Browse services & see upfront prices",
+  "Pick a time slot that suits you",
+  "Sit back - pay only after the job's done",
+];
+
 export default function Onboarding() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  useLightStatusBar(); // dark hero → light clock/battery icons
 
-  async function explore() {
-    await markIntroSeen();
-    router.replace("/(tabs)");
+  // The hero is dark and scrolls away with the page, so the status bar can't
+  // stay permanently "light" — once the white sections below scroll under it,
+  // white clock/battery icons on a white background go invisible. We measure
+  // the hero's real height and flip the status bar to dark the moment its
+  // dark background scrolls out from under the status bar area.
+  const [heroHeight, setHeroHeight] = useState(0);
+  const [pastHero, setPastHero] = useState(false);
+  useLightStatusBar(!pastHero);
+
+  // The CTA footer is absolutely positioned over the scroll content, and its
+  // height varies with insets/font scale — so the scroll's bottom padding is
+  // measured from the footer itself instead of a guessed constant. Otherwise
+  // the last card (How it works) ends up hidden behind the opaque footer.
+  const [footerHeight, setFooterHeight] = useState(180);
+
+  // router.back() throws "GO_BACK not handled" when onboarding has no prior
+  // screen in the stack (e.g. opened directly, no back history yet) — fall
+  // back to the home tab so the action always lands somewhere.
+  function goToMain() {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace("/(tabs)");
+    }
   }
 
-  async function signIn() {
-    await markIntroSeen();
+  function explore() {
+    goToMain();
+  }
+
+  function signIn() {
     router.push("/(auth)/login");
+  }
+
+  function onScroll(e) {
+    const y = e.nativeEvent.contentOffset.y;
+    const shouldBeDark = heroHeight > 0 && y > heroHeight - insets.top - 12;
+    setPastHero((prev) => (prev !== shouldBeDark ? shouldBeDark : prev));
   }
 
   return (
     <View style={styles.root}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 140 }}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        onScroll={onScroll}
+        scrollEventThrottle={32}
+        contentContainerStyle={{ paddingBottom: footerHeight + spacing.lg }}
+      >
         {/* ── Hero ───────────────────────────────────────────────── */}
-        <View style={[styles.hero, { paddingTop: insets.top + spacing.xl }]}>
+        <View
+          style={[styles.hero, { paddingTop: insets.top + spacing.xl }]}
+          onLayout={(e) => setHeroHeight(e.nativeEvent.layout.height)}
+        >
+          <Pressable onPress={goToMain} hitSlop={10} style={[styles.closeBtn, { top: insets.top + spacing.md }]}>
+            <Ionicons name="close" size={20} color={colors.textOnInk} />
+          </Pressable>
           <Logo size={30} light />
           <Txt color={colors.textOnInk} size={font.size.display} weight={font.weight.heavy} style={{ marginTop: spacing.xxl, lineHeight: 40 }}>
             Home services,{"\n"}done right.
           </Txt>
           <Txt color="rgba(255,255,255,0.72)" size={font.size.md} style={{ marginTop: spacing.md, lineHeight: 23 }}>
-            AC, appliances, electrical & more — booked in minutes and delivered by India's most trusted crew of professionals.
+            AC, appliances, electrical & more - booked in minutes and delivered by India's most trusted crew of professionals.
           </Txt>
 
           {/* Stats */}
@@ -88,37 +133,38 @@ export default function Onboarding() {
           <View style={styles.grid}>
             {SERVICES.map((s) => (
               <View key={s.key} style={styles.serviceCell}>
-                <View style={[styles.serviceIcon, { backgroundColor: categoryMeta[s.key]?.tint || colors.surfaceAlt, borderColor: "transparent" }]}>
-                  <CategoryIcon category={s.key} size={26} />
-                </View>
-                <Txt size={font.size.xs} weight={font.weight.semibold} center numberOfLines={2}>{s.label}</Txt>
+                <CategoryTile category={s.key} iconSize={30} style={styles.serviceIcon} />
+                <Txt size={font.size.xs} weight={font.weight.semibold} center numberOfLines={1}>{s.label}</Txt>
               </View>
             ))}
           </View>
         </View>
 
         {/* ── Why EliteCrew ──────────────────────────────────────── */}
-        <View style={[styles.section, { paddingTop: 0 }]}>
+        <View style={[styles.section, { paddingTop: spacing.xxxl }]}>
           <Txt size={font.size.lg} weight={font.weight.bold} style={{ marginBottom: spacing.lg }}>Why EliteCrew?</Txt>
-          {WHY.map((w) => (
-            <Row key={w.title} gap={spacing.md} align="flex-start" style={{ marginBottom: spacing.lg }}>
-              <View style={styles.whyIcon}><Ionicons name={w.icon} size={20} color={colors.ink} /></View>
-              <View style={{ flex: 1 }}>
-                <Txt weight={font.weight.semibold} size={font.size.md}>{w.title}</Txt>
-                <Txt muted size={font.size.sm} style={{ marginTop: 2, lineHeight: 20 }}>{w.sub}</Txt>
-              </View>
-            </Row>
-          ))}
+
+          <View style={{ gap: spacing.md, marginBottom: spacing.lg }}>
+            {WHY.map((w) => (
+              <Card key={w.title} elevated={false}>
+                <Row gap={spacing.md} align="center">
+                  <View style={styles.whyIcon}>
+                    <Ionicons name={w.icon} size={18} color={colors.ink} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Txt weight={font.weight.semibold} size={font.size.md} numberOfLines={1}>{w.title}</Txt>
+                    <Txt muted size={font.size.sm} numberOfLines={1} style={{ marginTop: 2 }}>{w.sub}</Txt>
+                  </View>
+                </Row>
+              </Card>
+            ))}
+          </View>
 
           {/* How it works */}
-          <Card style={{ marginTop: spacing.sm }}>
+          <Card elevated={false}>
             <Txt weight={font.weight.bold} size={font.size.md} style={{ marginBottom: spacing.md }}>How it works</Txt>
-            {[
-              "Browse services & see upfront prices",
-              "Pick a time slot that suits you",
-              "Sit back — pay only after the job's done",
-            ].map((step, i) => (
-              <Row key={i} gap={spacing.md} style={{ marginBottom: i < 2 ? spacing.md : 0 }}>
+            {HOW.map((step, i) => (
+              <Row key={i} gap={spacing.md} style={{ marginBottom: i < HOW.length - 1 ? spacing.md : 0 }}>
                 <View style={styles.stepNum}><Txt color={colors.textOnInk} size={font.size.xs} weight={font.weight.bold}>{i + 1}</Txt></View>
                 <Txt size={font.size.sm} weight={font.weight.medium} style={{ flex: 1 }}>{step}</Txt>
               </Row>
@@ -128,12 +174,15 @@ export default function Onboarding() {
       </ScrollView>
 
       {/* ── Sticky CTA ─────────────────────────────────────────── */}
-      <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.md }]}>
-        <Button title="Explore services" onPress={explore} />
+      <View
+        style={[styles.footer, { paddingBottom: insets.bottom + spacing.md }]}
+        onLayout={(e) => setFooterHeight(e.nativeEvent.layout.height)}
+      >
+        <Button title="Explore services" onPress={explore} rightIcon="arrow-forward" />
         <Pressable onPress={signIn} style={styles.signInLink} hitSlop={8}>
           <Txt muted size={font.size.sm}>Already a member? <Txt weight={font.weight.semibold} color={colors.ink}>Sign in</Txt></Txt>
         </Pressable>
-        <Txt faint center size={font.size.xs} style={{ marginTop: 2 }}>No account needed to browse — sign in only when you book.</Txt>
+        <Txt faint center size={font.size.xs} style={{ marginTop: 2 }}>No account needed to browse - sign in only when you book.</Txt>
       </View>
     </View>
   );
@@ -145,8 +194,14 @@ const styles = StyleSheet.create({
     backgroundColor: colors.ink,
     paddingHorizontal: spacing.xl,
     paddingBottom: spacing.xxl,
-    borderBottomLeftRadius: radii.xl + 6,
-    borderBottomRightRadius: radii.xl + 6,
+    borderBottomLeftRadius: radii.xxl,
+    borderBottomRightRadius: radii.xxl,
+    ...shadow.lifted,
+  },
+  closeBtn: {
+    position: "absolute", right: spacing.xl, zIndex: 1,
+    width: 34, height: 34, borderRadius: 17,
+    backgroundColor: "rgba(255,255,255,0.12)", alignItems: "center", justifyContent: "center",
   },
   stats: { marginTop: spacing.xxl, backgroundColor: "rgba(255,255,255,0.08)", borderRadius: radii.lg, paddingVertical: spacing.md },
   stat: { flex: 1, alignItems: "center" },
@@ -154,13 +209,13 @@ const styles = StyleSheet.create({
 
   section: { paddingHorizontal: spacing.xl, paddingTop: spacing.xxl },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
-  serviceCell: { width: "22%", alignItems: "center", gap: 8 },
-  serviceIcon: {
-    width: "100%", aspectRatio: 1, borderRadius: radii.lg, backgroundColor: colors.surfaceAlt,
-    alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: colors.border,
-  },
+  serviceCell: { width: "31%", alignItems: "center", gap: 8 },
+  serviceIcon: { width: "100%", aspectRatio: 1 },
 
-  whyIcon: { width: 46, height: 46, borderRadius: radii.md, backgroundColor: colors.surfaceAlt, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: colors.border },
+  whyIcon: {
+    width: 40, height: 40, borderRadius: radii.md, backgroundColor: colors.goldSoft,
+    alignItems: "center", justifyContent: "center", ...shadow.soft,
+  },
   stepNum: { width: 22, height: 22, borderRadius: 11, backgroundColor: colors.ink, alignItems: "center", justifyContent: "center" },
 
   footer: {

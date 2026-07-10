@@ -1,23 +1,18 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { View } from "react-native";
 import { Redirect } from "expo-router";
 import { useAuth } from "../src/store/auth";
-import { hasSeenIntro } from "../src/lib/onboarding";
 import { Logo } from "../src/components/Logo";
 import { colors } from "../src/theme";
 
-// Entry point. First-time visitors see the intro/landing (what the app does +
-// services). Returning guests and signed-in users go straight to the browse
-// experience. Login is never forced here — only later, at booking time.
+// Entry point. Everyone — guest or signed-in — lands straight on the browse
+// experience (services first). The "what EliteCrew does / why us" walkthrough
+// is one tap away from Home via "Explore EliteCrew", not a forced first step.
+// Login is never forced here — only later, at booking time.
 export default function Index() {
-  const { user, booting } = useAuth();
-  const [seenIntro, setSeenIntro] = useState(null);
+  const { booting } = useAuth();
 
-  useEffect(() => {
-    hasSeenIntro().then(setSeenIntro);
-  }, []);
-
-  if (booting || seenIntro === null) {
+  if (booting) {
     return (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.ink }}>
         <Logo size={56} light />
@@ -25,6 +20,5 @@ export default function Index() {
     );
   }
 
-  if (!user && !seenIntro) return <Redirect href="/onboarding" />;
   return <Redirect href="/(tabs)" />;
 }

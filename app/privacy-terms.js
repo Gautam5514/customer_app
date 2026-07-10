@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { View, StyleSheet, ScrollView, Pressable } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { ScreenHeader } from "../src/components/ScreenHeader";
 import { Txt, Row, Card } from "../src/components/ui";
@@ -46,12 +47,13 @@ const SECTIONS = [
 ];
 
 export default function PrivacyTerms() {
+  const insets = useSafeAreaInsets();
   const [open, setOpen] = useState(0);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <ScreenHeader title="Privacy & terms" />
-      <ScrollView contentContainerStyle={{ padding: spacing.xl, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={{ padding: spacing.xl, paddingBottom: 40 + insets.bottom }} showsVerticalScrollIndicator={false}>
 
         <View style={styles.hero}>
           <View style={styles.heroIcon}><Ionicons name="lock-closed" size={20} color={colors.gold} /></View>

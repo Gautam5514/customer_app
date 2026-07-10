@@ -6,16 +6,18 @@ import { Txt, Row } from "./ui";
 import { CategoryIcon } from "./CategoryIcon";
 import { serviceImages } from "../lib/serviceImages";
 import { inr } from "../lib/format";
-import { colors, spacing, font, radii, categoryMeta } from "../theme";
+import { colors, spacing, font, radii, categoryMeta, shadow } from "../theme";
 
 // Premium media card for service listings — photo banner on top, details below.
 // Two layouts from one component:
 //   <ServiceMediaCard service={s} onPress={…} />                 → full-width (category list)
 //   <ServiceMediaCard service={s} onPress={…} compact width={W}/> → carousel tile (home)
 //
-// Flat design language: hairline border, one radius, no shadows. If the photo
-// is missing or fails to load, a tinted category-icon panel takes its place so
-// the card never looks broken.
+// A soft shadow lifts the card off the page; a fine hairline border keeps its
+// edge crisp. Shadow lives on the outer Pressable and the rounded-corner photo
+// clip on an inner wrapper — a view can't cast a shadow and clip its own
+// content at the same time. If the photo is missing or fails to load, a
+// tinted category-icon panel takes its place so the card never looks broken.
 export function ServiceMediaCard({ service, onPress, compact = false, width }) {
   const [imgFailed, setImgFailed] = useState(false);
   const images = serviceImages(service);
@@ -27,11 +29,12 @@ export function ServiceMediaCard({ service, onPress, compact = false, width }) {
     <Pressable
       onPress={onPress}
       style={({ pressed }) => [
-        styles.card,
+        styles.shadowWrap,
         compact && { width },
         pressed && { opacity: 0.92 },
       ]}
     >
+      <View style={styles.card}>
       {/* ── Photo banner ── */}
       <View style={[styles.media, { height: compact ? 96 : 150 }]}>
         {uri ? (
@@ -109,18 +112,23 @@ export function ServiceMediaCard({ service, onPress, compact = false, width }) {
           </View>
         </Row>
       </View>
+      </View>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
+  shadowWrap: {
+    borderRadius: radii.xl,
+    marginBottom: spacing.md,
+    ...shadow.card,
+  },
   card: {
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radii.xl,
     overflow: "hidden",
-    marginBottom: spacing.md,
   },
   media: {
     backgroundColor: colors.surfaceSunken,

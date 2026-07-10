@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { View, StyleSheet, ScrollView, Pressable, Alert, KeyboardAvoidingView, Platform, Modal } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { ScreenHeader } from "../src/components/ScreenHeader";
 import { Txt, Row, Card, Button, Input, Pill, Loading, EmptyState, Chip } from "../src/components/ui";
@@ -12,6 +13,7 @@ const LABELS = ["Home", "Work", "Other"];
 const EMPTY_FORM = { label: "Home", fullAddress: "", city: "", pincode: "", lat: null, lng: null };
 
 export default function Addresses() {
+  const insets = useSafeAreaInsets();
   const { data, isLoading } = useAddresses();
   const addMut = useAddAddress();
   const setDefault = useSetDefaultAddress();
@@ -62,7 +64,7 @@ export default function Addresses() {
       {isLoading ? (
         <Loading />
       ) : (
-        <ScrollView contentContainerStyle={{ padding: spacing.xl, paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
+        <ScrollView contentContainerStyle={{ padding: spacing.xl, paddingBottom: 40 + insets.bottom }} keyboardShouldPersistTaps="handled">
           {addresses.length === 0 && !adding ? (
             <EmptyState icon="location-outline" title="No addresses yet" subtitle="Add an address to book services faster." />
           ) : (

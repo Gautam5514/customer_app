@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { View, StyleSheet, ScrollView, Pressable, Linking } from "react-native";
 import { useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { ScreenHeader } from "../src/components/ScreenHeader";
 import { Txt, Row, Card } from "../src/components/ui";
@@ -46,12 +47,13 @@ const FAQS = [
 
 export default function HelpSupport() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [open, setOpen] = useState(null);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <ScreenHeader title="Help & support" />
-      <ScrollView contentContainerStyle={{ padding: spacing.xl, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={{ padding: spacing.xl, paddingBottom: 40 + insets.bottom }} showsVerticalScrollIndicator={false}>
 
         <View style={styles.hero}>
           <View style={styles.heroIcon}><Ionicons name="headset" size={20} color={colors.gold} /></View>

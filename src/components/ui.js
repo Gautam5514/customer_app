@@ -41,7 +41,8 @@ export function Button({
   size = "lg", // lg | md | sm
   loading = false,
   disabled = false,
-  icon = null,
+  icon = null, // leading emoji/glyph
+  rightIcon = null, // trailing Ionicons name, e.g. "arrow-forward"
   style,
   fullWidth = true,
 }) {
@@ -70,6 +71,7 @@ export function Button({
           <Text style={{ color: v.fg, fontSize: s.fs, fontWeight: font.weight.semibold, letterSpacing: 0.2 }}>
             {title}
           </Text>
+          {rightIcon ? <Ionicons name={rightIcon} size={s.fs + 2} color={v.fg} /> : null}
         </View>
       )}
     </Pressable>

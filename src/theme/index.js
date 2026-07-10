@@ -32,14 +32,15 @@ export const colors = {
   infoSoft: "#E8EEFC",
 };
 
-// Classic EliteCrew radius — one restrained, consistent corner everywhere.
-// Cards, buttons, inputs and tiles all share `md`/`lg`; only big surfaces use
-// the slightly larger `xl`. Nothing is bubbly.
+// Classic EliteCrew radius — one restrained, consistent corner scale.
+// Cards/tiles sit on `lg`, big surfaces (hero, header, sheets) on `xl`/`xxl`.
+// Still slightly-rounded and premium, never bubbly.
 export const radii = {
-  sm: 8,
-  md: 10,
-  lg: 10,
-  xl: 12,
+  sm: 10,
+  md: 12,
+  lg: 16,
+  xl: 20,
+  xxl: 28,
   pill: 999,
 };
 
@@ -74,12 +75,31 @@ export const font = {
   },
 };
 
-// Classic, flat surfaces — no drop shadows. Definition comes from crisp
-// hairline borders instead. Kept as empty objects so existing `...shadow.card`
-// spreads stay valid everywhere.
+// Soft, premium elevation — ink-tinted, low-opacity, wide-radius shadows
+// (never a hard drop shadow). Paired with a fine hairline border, this is
+// what gives cards/tiles their "lifted" feel instead of looking flat.
 export const shadow = {
-  card: {},
-  soft: {},
+  soft: {
+    shadowColor: "#0A0A0A",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  card: {
+    shadowColor: "#0A0A0A",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 18,
+    elevation: 4,
+  },
+  lifted: {
+    shadowColor: "#0A0A0A",
+    shadowOffset: { width: 0, height: 14 },
+    shadowOpacity: 0.14,
+    shadowRadius: 30,
+    elevation: 10,
+  },
 };
 
 // Maps a booking status to its display label + tone.
@@ -105,6 +125,16 @@ export const categoryMeta = {
   electrical: { label: "Electrical",    icon: "power-plug",      color: "#D97706", tint: "#FBF0DC" }, // plug · amber
   appliance:  { label: "Appliance",     icon: "washing-machine", color: "#475569", tint: "#EEF1F5" }, // washing machine · slate
   cleaning:   { label: "Cleaning",      icon: "broom",           color: "#059669", tint: "#E5F5EF" }, // broom · emerald
+  plumbing:   { label: "Plumbing",      icon: "pipe",            color: "#2563EB", tint: "#E8EFFE" },
+  carpentry:  { label: "Carpentry",     icon: "hammer-screwdriver", color: "#B45309", tint: "#FEF3C7" },
+  "pest-control": { label: "Pest Control", icon: "bug",          color: "#65A30D", tint: "#ECFCCB" },
+  painting:   { label: "Painting",      icon: "format-paint",    color: "#C026D3", tint: "#FAE8FF" },
+  laundry:    { label: "Laundry",       icon: "tshirt-crew-outline", color: "#7C3AED", tint: "#F3E8FF" },
+  "car-wash": { label: "Car Wash",      icon: "car-wash",        color: "#334155", tint: "#F1F5F9" },
+  beauty:     { label: "Beauty",        icon: "face-woman-shimmer-outline", color: "#DB2777", tint: "#FCE7F3" },
+  grooming:   { label: "Grooming",      icon: "content-cut",     color: "#57534E", tint: "#F5F5F4" },
+  moving:     { label: "Moving",        icon: "truck-outline",   color: "#CA8A04", tint: "#FEF9C3" },
+  gardening:  { label: "Gardening",     icon: "flower-outline",  color: "#16A34A", tint: "#DCFCE7" },
   other:      { label: "More Services", icon: "toolbox-outline", color: "#6B7280", tint: "#F0F1F3" }, // toolbox · grey
 };
 

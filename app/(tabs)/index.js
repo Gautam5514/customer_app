@@ -1,26 +1,28 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { View, StyleSheet, ScrollView, Pressable, RefreshControl, TextInput, Modal } from "react-native";
+import { View, StyleSheet, ScrollView, Pressable, RefreshControl, TextInput, Modal, Dimensions } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { Logo } from "../../src/components/Logo";
-import { CategoryIcon, CategoryBadge } from "../../src/components/CategoryIcon";
+import { CategoryBadge, CategoryTile } from "../../src/components/CategoryIcon";
 import { LocationPicker } from "../../src/components/LocationPicker";
 import { Txt, Row, SectionHeader, Skeleton, ErrorState, EmptyState } from "../../src/components/ui";
 import { ServiceMediaCard } from "../../src/components/ServiceMediaCard";
 import { useServices } from "../../src/lib/queries";
-import { useAuth } from "../../src/store/auth";
 import { useLocation } from "../../src/store/location";
 import { useLightStatusBar } from "../../src/lib/useStatusBar";
-import { inr, initials } from "../../src/lib/format";
+import { inr } from "../../src/lib/format";
 import { colors, spacing, font, radii, categoryMeta, shadow } from "../../src/theme";
 import { Image } from "expo-image";
 import { serviceImages } from "../../src/lib/serviceImages";
 
+// Category row shows exactly 3 tiles per screen-width, sliding horizontally
+// for the rest — sized from the real screen width so it works on any device.
+const SCREEN_WIDTH = Dimensions.get("window").width;
+const CAT_TILE_WIDTH = (SCREEN_WIDTH - spacing.xl - spacing.md * 2) / 3;
+
 export default function Home() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { user } = useAuth();
   const { data, isLoading, isError, refetch, isRefetching } = useServices();
   const { location, setLocation, markAsked, shouldPrompt } = useLocation();
   const [search, setSearch] = useState("");
@@ -60,22 +62,8 @@ export default function Home() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      {/* ── Header ─────────────────────────────────────────────── */}
-      <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
-        <Row justify="space-between">
-          <Logo size={24} light />
-          {user ? (
-            <Pressable onPress={() => router.push("/(tabs)/profile")} style={styles.avatar} hitSlop={6}>
-              <Txt color={colors.textOnInk} weight={font.weight.bold} size={font.size.sm}>{initials(user?.fullName) || "U"}</Txt>
-            </Pressable>
-          ) : (
-            <Pressable onPress={() => router.push("/(auth)/login")} style={styles.signInBtn} hitSlop={6}>
-              <Ionicons name="person-circle-outline" size={16} color={colors.textOnInk} />
-              <Txt color={colors.textOnInk} weight={font.weight.semibold} size={font.size.sm}>Sign in</Txt>
-            </Pressable>
-          )}
-        </Row>
-
+      {/* ── Header — minimal: just location + search ──────────────── */}
+      <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
         {/* Location chip — tap to set/change; reused on every open after the first */}
         <Pressable onPress={() => setPicking(true)} style={styles.locChip} hitSlop={6}>
           <Ionicons name="location" size={14} color={colors.textOnInk} />
@@ -84,10 +72,6 @@ export default function Home() {
           </Txt>
           <Ionicons name="chevron-down" size={14} color={colors.textOnInk} />
         </Pressable>
-
-        <Txt color={colors.textOnInk} size={font.size.xl} weight={font.weight.bold} style={{ marginTop: spacing.md }}>
-          {user ? `Hi ${user.fullName?.split(" ")[0] || "there"}, what needs fixing?` : "What needs fixing today?"}
-        </Txt>
 
         {/* Search */}
         <View style={styles.searchBar}>
@@ -140,9 +124,14 @@ export default function Home() {
           </View>
         ) : (
           <>
-            {/* Categories */}
+            {/* Categories — 3 tiles per screen, slides horizontally for the rest */}
             <SectionHeader title="What do you need?" />
-            <View style={styles.grid}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.catScroll}
+              contentContainerStyle={styles.catRow}
+            >
               {categories.map((cat) => {
                 const meta = categoryMeta[cat] || { label: cat };
                 return (
@@ -151,14 +140,12 @@ export default function Home() {
                     style={({ pressed }) => [styles.catCell, pressed && { opacity: 0.85 }]}
                     onPress={() => router.push(`/category/${cat}`)}
                   >
-                    <View style={[styles.catIcon, { backgroundColor: meta.tint || colors.surfaceAlt }]}>
-                      <CategoryIcon category={cat} size={26} />
-                    </View>
+                    <CategoryTile category={cat} iconSize={28} style={styles.catIcon} />
                     <Txt size={font.size.xs} weight={font.weight.semibold} center numberOfLines={1}>{meta.label}</Txt>
                   </Pressable>
                 );
               })}
-            </View>
+            </ScrollView>
 
             {/* Offer — informational banner; the code is applied at checkout */}
             <View style={styles.promo}>
@@ -205,14 +192,14 @@ function HomeSkeleton() {
   return (
     <View>
       <Skeleton width={150} height={18} style={{ marginBottom: spacing.lg }} />
-      <View style={styles.grid}>
-        {Array.from({ length: 8 }).map((_, i) => (
+      <Row gap={spacing.md} style={{ marginBottom: spacing.xl }}>
+        {Array.from({ length: 3 }).map((_, i) => (
           <View key={i} style={styles.catCell}>
-            <Skeleton width={58} height={58} radius={radii.lg} />
+            <Skeleton width={CAT_TILE_WIDTH} height={CAT_TILE_WIDTH} radius={radii.lg} />
             <Skeleton width={44} height={10} />
           </View>
         ))}
-      </View>
+      </Row>
       <Skeleton height={72} radius={radii.lg} style={{ marginBottom: spacing.xxl }} />
       <Skeleton width={120} height={18} style={{ marginBottom: spacing.lg }} />
       {/* Mirrors the stacked media cards */}
@@ -276,39 +263,40 @@ const styles = StyleSheet.create({
     backgroundColor: colors.ink,
     paddingHorizontal: spacing.xl,
     paddingBottom: spacing.xl,
-    borderBottomLeftRadius: radii.xl,
-    borderBottomRightRadius: radii.xl,
+    borderBottomLeftRadius: radii.xxl,
+    borderBottomRightRadius: radii.xxl,
+    ...shadow.lifted,
   },
-  avatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.14)", alignItems: "center", justifyContent: "center" },
   locChip: {
     flexDirection: "row", alignItems: "center", gap: 4, alignSelf: "flex-start",
-    marginTop: spacing.md, paddingVertical: 5, paddingHorizontal: spacing.sm,
+    paddingVertical: 5, paddingHorizontal: spacing.sm,
     borderRadius: radii.pill, backgroundColor: "rgba(255,255,255,0.12)",
-  },
-  signInBtn: {
-    flexDirection: "row", alignItems: "center", gap: 5,
-    backgroundColor: "rgba(255,255,255,0.14)", borderRadius: radii.pill,
-    paddingHorizontal: spacing.md, height: 34,
   },
   searchBar: {
     flexDirection: "row", alignItems: "center", gap: 8,
-    backgroundColor: colors.surface, borderRadius: radii.md,
-    paddingHorizontal: spacing.lg, height: 48, marginTop: spacing.lg,
-    ...shadow.soft,
+    backgroundColor: colors.surface, borderRadius: radii.lg,
+    paddingHorizontal: spacing.lg, height: 50, marginTop: spacing.lg,
+    ...shadow.card,
   },
   searchInput: { flex: 1, fontSize: font.size.md, color: colors.text, paddingVertical: 0 },
 
-  grid: { flexDirection: "row", flexWrap: "wrap", rowGap: spacing.lg, marginBottom: spacing.xl },
-  catCell: { width: "25%", alignItems: "center", gap: 7, paddingHorizontal: 2 },
-  catIcon: { width: 58, height: 58, borderRadius: radii.lg, alignItems: "center", justifyContent: "center" },
+  // Bleeds full-width past the screen's own padding so the row can scroll
+  // edge to edge; contentContainerStyle re-adds the padding as scrollable
+  // content instead so items still line up with the rest of the page.
+  catScroll: { marginHorizontal: -spacing.xl, marginBottom: spacing.xl },
+  catRow: { paddingHorizontal: spacing.xl, gap: spacing.md },
+  catCell: { width: CAT_TILE_WIDTH, alignItems: "center", gap: 7 },
+  catIcon: { width: CAT_TILE_WIDTH, height: CAT_TILE_WIDTH },
 
   promo: {
     flexDirection: "row", alignItems: "center", gap: spacing.md,
     backgroundColor: colors.ink, borderRadius: radii.lg, padding: spacing.md,
+    borderWidth: 1, borderColor: "rgba(200,164,92,0.3)",
+    ...shadow.card,
   },
   promoIcon: {
     width: 44, height: 44, borderRadius: radii.md,
-    backgroundColor: "rgba(255,255,255,0.08)", alignItems: "center", justifyContent: "center",
+    backgroundColor: "rgba(200,164,92,0.14)", alignItems: "center", justifyContent: "center",
   },
 
   card: {

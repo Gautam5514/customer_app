@@ -33,6 +33,39 @@ const CATEGORY_IMAGES = {
     "/uploads/appliance_repair.png",
     "/uploads/washing_machine_repair.png"
   ],
+  cleaning: [
+    "/uploads/cleaning.png"
+  ],
+  plumbing: [
+    "/uploads/plumbing.png"
+  ],
+  carpentry: [
+    "/uploads/carpentry.png"
+  ],
+  "pest-control": [
+    "/uploads/pest_control.png"
+  ],
+  painting: [
+    "/uploads/painting.png"
+  ],
+  laundry: [
+    "/uploads/laundry.png"
+  ],
+  "car-wash": [
+    "/uploads/car_wash.png"
+  ],
+  beauty: [
+    "/uploads/beauty.png"
+  ],
+  grooming: [
+    "/uploads/grooming.png"
+  ],
+  moving: [
+    "/uploads/moving.png"
+  ],
+  gardening: [
+    "/uploads/gardening.png"
+  ],
 };
 
 // Returns image URLs for a service: its own uploaded images when present,

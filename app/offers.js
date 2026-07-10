@@ -1,6 +1,7 @@
 import React from "react";
 import { View, StyleSheet, ScrollView, Pressable } from "react-native";
 import { useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { ScreenHeader } from "../src/components/ScreenHeader";
 import { Txt, Row, Card, Button } from "../src/components/ui";
@@ -37,11 +38,12 @@ const HOW = [
 
 export default function Offers() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <ScreenHeader title="Offers & coupons" />
-      <ScrollView contentContainerStyle={{ padding: spacing.xl, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={{ padding: spacing.xl, paddingBottom: 40 + insets.bottom }} showsVerticalScrollIndicator={false}>
 
         {OFFERS.map((o, i) => (
           <Card key={o.code} padded={false} style={{ overflow: "hidden", marginBottom: spacing.md }}>

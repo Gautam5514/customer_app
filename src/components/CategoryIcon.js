@@ -1,7 +1,9 @@
-import React from "react";
-import { View } from "react-native";
+import React, { useState } from "react";
+import { View, StyleSheet } from "react-native";
+import { Image } from "expo-image";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { categoryMeta, colors, radii } from "../theme";
+import { categoryMeta, colors, radii, shadow } from "../theme";
+import { categoryThumbnails } from "../lib/categoryImages";
 
 // Renders the on-brand vector icon for a service category (AC, fridge, fan…),
 // using that category's accent colour. Single source of truth so every screen
@@ -30,3 +32,45 @@ export function CategoryBadge({ category, size = 52, radius = radii.md, iconSize
     </View>
   );
 }
+
+// Photo-led tile for category browsing grids (onboarding, home). Shows the
+// real service photo when we have one for that category, falling back to
+// the tinted vector-icon badge otherwise — so the grid never looks broken.
+// Sizing/shape (width, height, aspectRatio, margin…) comes from the caller's
+// `style`; `radius` controls the corner rounding of both the shadow-casting
+// outer view and the image-clipping inner view (kept as two views because a
+// view can't both cast a shadow and clip its own content to rounded corners).
+export function CategoryTile({ category, iconSize = 24, radius = radii.lg, style }) {
+  const meta = categoryMeta[category] || {};
+  const thumb = categoryThumbnails[category];
+  const [failed, setFailed] = useState(false);
+  const showImage = thumb && !failed;
+
+  return (
+    <View style={[shadow.soft, { borderRadius: radius }, style]}>
+      <View
+        style={[
+          tileStyles.tile,
+          { borderRadius: radius },
+          !showImage && { backgroundColor: meta.tint || colors.surfaceAlt },
+        ]}
+      >
+        {showImage ? (
+          <Image
+            source={thumb}
+            style={StyleSheet.absoluteFill}
+            contentFit="cover"
+            transition={150}
+            onError={() => setFailed(true)}
+          />
+        ) : (
+          <MaterialCommunityIcons name={meta.icon || "wrench"} size={iconSize} color={meta.color || colors.ink} />
+        )}
+      </View>
+    </View>
+  );
+}
+
+const tileStyles = StyleSheet.create({
+  tile: { flex: 1, overflow: "hidden", alignItems: "center", justifyContent: "center" },
+});

@@ -3,6 +3,8 @@ import { View, StyleSheet, ScrollView, Pressable, Alert, Linking, RefreshControl
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import * as FileSystem from "expo-file-system";
+import * as Sharing from "expo-sharing";
 import { ScreenHeader } from "../../src/components/ScreenHeader";
 import { CategoryBadge } from "../../src/components/CategoryIcon";
 import { Txt, Row, Card, Button, Pill, Loading } from "../../src/components/ui";
@@ -10,6 +12,8 @@ import { PaymentWebView } from "../../src/components/PaymentWebView";
 import { useBooking, useCancelBooking } from "../../src/lib/queries";
 import { createPaymentOrder, verifyPayment } from "../../src/lib/payments";
 import { apiError } from "../../src/lib/api";
+import { getCachedToken } from "../../src/lib/token";
+import { API_BASE } from "../../src/lib/config";
 import { inr, fmtDate, fmtTimeSlot } from "../../src/lib/format";
 import { colors, spacing, font, radii, statusMeta } from "../../src/theme";
 
@@ -33,6 +37,8 @@ export default function BookingDetail() {
   const [payData, setPayData] = useState(null); // { order, keyId, prefill } while checkout open
   const [paying, setPaying]   = useState(false);
   const [payError, setPayError] = useState(null);
+  const [downloading, setDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState(null);
 
   const booking = data?.booking;
   if (isLoading || !booking) {
@@ -95,6 +101,28 @@ export default function BookingDetail() {
     }
   }
 
+  async function onDownloadInvoice() {
+    setDownloadError(null);
+    setDownloading(true);
+    try {
+      const token = getCachedToken();
+      const fileUri = `${FileSystem.documentDirectory}invoice-${booking.bookingNumber}.pdf`;
+      const result = await FileSystem.downloadAsync(
+        `${API_BASE}/bookings/${id}/invoice`,
+        fileUri,
+        { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+      );
+      if (result.status !== 200) throw new Error("Download failed");
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(result.uri, { mimeType: "application/pdf", dialogTitle: "Invoice" });
+      }
+    } catch (e) {
+      setDownloadError(apiError(e, "Couldn't download invoice. Please try again."));
+    } finally {
+      setDownloading(false);
+    }
+  }
+
   function onCancel() {
     Alert.alert("Cancel booking", "Are you sure you want to cancel this service?", [
       { text: "Keep it", style: "cancel" },
@@ -109,7 +137,7 @@ export default function BookingDetail() {
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <ScreenHeader title={`#${booking.bookingNumber}`} />
       <ScrollView
-        contentContainerStyle={{ padding: spacing.xl, paddingBottom: 40 }}
+        contentContainerStyle={{ padding: spacing.xl, paddingBottom: 40 + insets.bottom }}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.ink} />}
       >
@@ -263,6 +291,23 @@ export default function BookingDetail() {
             <Txt weight={font.weight.heavy} size={font.size.lg}>{inr(booking.pricing?.totalAmount)}</Txt>
           </Row>
         </Card>
+
+        {/* Invoice */}
+        {isCompleted ? (
+          <Card style={{ marginTop: spacing.lg }}>
+            <Row gap={spacing.sm} style={{ marginBottom: spacing.md }}>
+              <Ionicons name="document-text-outline" size={16} color={colors.ink} />
+              <Txt weight={font.weight.bold} size={font.size.md}>Invoice</Txt>
+            </Row>
+            <Txt size={font.size.sm} muted style={{ marginBottom: spacing.md }}>
+              Download your tax invoice for this booking.
+            </Txt>
+            {downloadError ? (
+              <Txt size={font.size.xs} color={colors.danger} style={{ marginBottom: spacing.sm }}>{downloadError}</Txt>
+            ) : null}
+            <Button title="Download Invoice" variant="secondary" loading={downloading} onPress={onDownloadInvoice} />
+          </Card>
+        ) : null}
 
         {/* Actions */}
         <View style={{ marginTop: spacing.xl, gap: spacing.md }}>

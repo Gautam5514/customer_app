@@ -1,6 +1,7 @@
 import React, { useMemo } from "react";
 import { View, StyleSheet, FlatList, RefreshControl } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { ScreenHeader } from "../../src/components/ScreenHeader";
 import { CategoryBadge } from "../../src/components/CategoryIcon";
@@ -24,6 +25,7 @@ const TRUST = [
 export default function CategoryList() {
   const { cat } = useLocalSearchParams();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { data, isLoading, isError, refetch, isRefetching } = useServices();
   const meta = categoryMeta[cat] || { label: fallbackLabel(cat) };
 
@@ -47,7 +49,7 @@ export default function CategoryList() {
         <FlatList
           data={services}
           keyExtractor={(s) => s._id}
-          contentContainerStyle={{ padding: spacing.xl, paddingBottom: 40, flexGrow: 1 }}
+          contentContainerStyle={{ padding: spacing.xl, paddingBottom: 40 + insets.bottom, flexGrow: 1 }}
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.ink} />}
           ListHeaderComponent={

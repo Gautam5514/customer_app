@@ -27,6 +27,14 @@ export const API_BASE = `${API_URL}/api`;
 // Turn a relative upload path from the API ("/uploads/..") into an absolute URL.
 export function absoluteUrl(pathOrUrl) {
   if (!pathOrUrl) return null;
+  // Some images were uploaded through the admin panel on the same machine as
+  // the API, so the backend baked a literal "http://localhost:8080/..." URL
+  // into the database. That only resolves on that machine — on a phone,
+  // "localhost" means the phone itself, so the image is just broken. Swap in
+  // the API host this device actually resolved instead.
+  if (/^https?:\/\/localhost(:\d+)?\//i.test(pathOrUrl)) {
+    return pathOrUrl.replace(/^https?:\/\/localhost(:\d+)?/i, API_URL);
+  }
   if (/^https?:\/\//i.test(pathOrUrl)) return pathOrUrl;
   return `${API_URL}${pathOrUrl.startsWith("/") ? "" : "/"}${pathOrUrl}`;
 }
