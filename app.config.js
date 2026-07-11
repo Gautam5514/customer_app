@@ -27,6 +27,7 @@ export default {
     },
     android: {
       package: "in.elitecrew.customer",
+      softwareKeyboardLayoutMode: "resize",
       adaptiveIcon: {
         backgroundColor: "#0A0A0A",
         foregroundImage: "./assets/elitecrew-favicon.png",

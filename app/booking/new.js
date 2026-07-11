@@ -10,7 +10,7 @@ import { Txt, Row, Button, Input, Loading } from "../../src/components/ui";
 import { PaymentWebView } from "../../src/components/PaymentWebView";
 import { useAddresses, useCreateBooking } from "../../src/lib/queries";
 import { fetchPaymentConfig, createPaymentOrder, verifyPayment } from "../../src/lib/payments";
-import { apiError } from "../../src/lib/api";
+import { api, apiError } from "../../src/lib/api";
 import { inr, fmtTimeSlot, quote } from "../../src/lib/format";
 import { colors, spacing, font, radii } from "../../src/theme";
 
@@ -50,6 +50,9 @@ export default function NewBooking() {
   const [showNote, setShowNote] = useState(false);
   const [coupon, setCoupon] = useState("");
   const [showCoupon, setShowCoupon] = useState(false);
+  const [couponApplied, setCouponApplied] = useState(null); // { code, discount, message }
+  const [couponError, setCouponError] = useState("");
+  const [couponChecking, setCouponChecking] = useState(false);
   const [error, setError] = useState(null);
 
   // Payment: default to online; fall back to COD-only if unconfigured.
@@ -77,9 +80,36 @@ export default function NewBooking() {
     []
   );
 
-  const q = quote(basePrice);
+  const q = quote(basePrice, couponApplied?.discount || 0);
 
   const method = onlineEnabled ? payMethod : "cash_on_delivery";
+
+  function onCouponChange(text) {
+    setCoupon(text.toUpperCase());
+    setCouponApplied(null);
+    setCouponError("");
+  }
+
+  async function applyCoupon() {
+    const code = coupon.trim();
+    if (!code || couponChecking) return;
+    setCouponChecking(true);
+    setCouponError("");
+    try {
+      // Validate against the pre-discount subtotal — same figure the booking
+      // itself is created against — so the preview matches what's charged.
+      const { total: orderAmount } = quote(basePrice);
+      const { data } = await api.post("/coupons/validate", {
+        code, orderAmount, category: params.category,
+      });
+      setCouponApplied({ code: data.coupon?.code || code, discount: data.discount, message: data.message });
+    } catch (e) {
+      setCouponApplied(null);
+      setCouponError(apiError(e, "Invalid coupon."));
+    } finally {
+      setCouponChecking(false);
+    }
+  }
 
   async function confirm() {
     setError(null);
@@ -104,7 +134,7 @@ export default function NewBooking() {
         pricing: { basePrice },
         customerNote: note.trim(),
         paymentMethod: method,
-        ...(coupon.trim() ? { couponCode: coupon.trim() } : {}),
+        ...(couponApplied?.discount > 0 ? { couponCode: couponApplied.code } : {}),
       };
       const res = await create.mutateAsync(payload);
       const id = res?.booking?._id;
@@ -290,14 +320,37 @@ export default function NewBooking() {
               <Ionicons name="pricetag-outline" size={15} color={colors.gold} />
             </View>
             <Txt weight={font.weight.semibold} size={font.size.sm} style={{ flex: 1 }}>
-              {coupon.trim() ? `Coupon ${coupon.trim()}` : "Apply a coupon"}
+              {couponApplied ? `Coupon ${couponApplied.code} applied` : "Apply a coupon"}
             </Txt>
-            {coupon.trim() ? <Ionicons name="checkmark-circle" size={16} color={colors.success} /> : null}
+            {couponApplied ? <Ionicons name="checkmark-circle" size={16} color={colors.success} /> : null}
             <Ionicons name={showCoupon ? "chevron-up" : "chevron-down"} size={16} color={colors.textFaint} />
           </Pressable>
           {showCoupon ? (
             <View style={styles.extraBody}>
-              <Input placeholder="Enter code (e.g. ELITE100)" value={coupon} onChangeText={(t) => setCoupon(t.toUpperCase())} autoCapitalize="characters" />
+              <Input
+                placeholder="Enter code (e.g. ELITE100)"
+                value={coupon}
+                onChangeText={onCouponChange}
+                autoCapitalize="characters"
+                editable={!couponApplied}
+                error={couponError}
+                right={
+                  <Pressable onPress={couponApplied ? onCouponChange.bind(null, "") : applyCoupon} hitSlop={10} disabled={couponChecking || !coupon.trim()}>
+                    <Txt
+                      weight={font.weight.bold}
+                      size={font.size.xs}
+                      color={!coupon.trim() ? colors.textFaint : couponApplied ? colors.danger : colors.ink}
+                    >
+                      {couponChecking ? "…" : couponApplied ? "Remove" : "Apply"}
+                    </Txt>
+                  </Pressable>
+                }
+              />
+              {couponApplied ? (
+                <Txt size={font.size.xs} weight={font.weight.semibold} color={colors.success} style={{ marginTop: -spacing.sm, marginBottom: spacing.sm }}>
+                  {couponApplied.message || "Coupon applied!"} — you save {inr(couponApplied.discount)}
+                </Txt>
+              ) : null}
             </View>
           ) : null}
         </View>
@@ -335,7 +388,7 @@ export default function NewBooking() {
           <PriceRow label="Service charge" value={inr(q.base)} />
           <PriceRow label="Platform fee" value={inr(q.platformFee)} />
           <PriceRow label="GST (18%)" value={inr(q.tax)} />
-          {coupon.trim() ? <PriceRow label={`Coupon ${coupon.trim()}`} value="applied at checkout" green /> : null}
+          {couponApplied ? <PriceRow label={`Coupon ${couponApplied.code}`} value={`- ${inr(couponApplied.discount)}`} green /> : null}
           <View style={styles.billDivider} />
           <Row justify="space-between">
             <Txt weight={font.weight.bold} size={font.size.md}>Total payable</Txt>

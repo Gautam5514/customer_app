@@ -62,6 +62,7 @@ function RootNavigator() {
       <Stack.Screen name="edit-profile" options={{ presentation: "card" }} />
       <Stack.Screen name="coming-soon" options={{ presentation: "card" }} />
       <Stack.Screen name="help-support" options={{ presentation: "card" }} />
+      <Stack.Screen name="support/[id]" options={{ presentation: "card" }} />
       <Stack.Screen name="offers" options={{ presentation: "card" }} />
       <Stack.Screen name="privacy-terms" options={{ presentation: "card" }} />
       <Stack.Screen name="rate/[bookingId]" options={{ presentation: "modal" }} />
