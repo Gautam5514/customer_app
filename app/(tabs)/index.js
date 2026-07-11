@@ -1,12 +1,12 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { View, StyleSheet, ScrollView, Pressable, RefreshControl, TextInput, Modal, Dimensions } from "react-native";
+import { View, StyleSheet, ScrollView, Pressable, RefreshControl, TextInput, Dimensions } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { CategoryBadge, CategoryTile } from "../../src/components/CategoryIcon";
-import { LocationPicker } from "../../src/components/LocationPicker";
 import { Txt, Row, SectionHeader, Skeleton, ErrorState, EmptyState } from "../../src/components/ui";
 import { ServiceMediaCard } from "../../src/components/ServiceMediaCard";
+import { ReferEarnCard } from "../../src/components/ReferEarnCard";
 import { useServices } from "../../src/lib/queries";
 import { useLocation } from "../../src/store/location";
 import { useLightStatusBar } from "../../src/lib/useStatusBar";
@@ -24,16 +24,18 @@ export default function Home() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { data, isLoading, isError, refetch, isRefetching } = useServices();
-  const { location, setLocation, markAsked, shouldPrompt } = useLocation();
+  const { location, markAsked, shouldPrompt, detecting } = useLocation();
   const [search, setSearch] = useState("");
-  const [picking, setPicking] = useState(false);
 
   useLightStatusBar(); // dark header → light clock/battery icons
 
-  // First launch only: open the picker once. shouldPrompt flips back to false
-  // forever after the user picks or closes it (persisted), so we never nag.
+  // First launch only (and only if GPS auto-detect didn't already resolve it):
+  // open the location page once. markAsked persists so we never nag again.
   useEffect(() => {
-    if (shouldPrompt) setPicking(true);
+    if (shouldPrompt) {
+      markAsked();
+      router.push("/location");
+    }
   }, [shouldPrompt]);
 
   const services = data?.services || [];
@@ -62,20 +64,24 @@ export default function Home() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      {/* ── Header — minimal: just location + search ──────────────── */}
+      {/* ── Header — UC-style: current place centered up top, search below.
+          The place auto-fills from real GPS on app open (see LocationProvider);
+          tapping it opens the picker to change. */}
       <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
-        {/* Location chip — tap to set/change; reused on every open after the first */}
-        <Pressable onPress={() => setPicking(true)} style={styles.locChip} hitSlop={6}>
-          <Ionicons name="location" size={14} color={colors.textOnInk} />
-          <Txt color={colors.textOnInk} weight={font.weight.semibold} size={font.size.sm} numberOfLines={1} style={{ maxWidth: 240 }}>
-            {location ? (location.city || location.fullAddress || "Location set") : "Set your location"}
+        <Pressable onPress={() => router.push("/location")} style={({ pressed }) => [styles.locRow, pressed && { opacity: 0.7 }]} hitSlop={8}>
+          <Ionicons name="location" size={15} color={colors.gold} />
+          <Txt color={colors.textOnInk} weight={font.weight.semibold} size={font.size.sm} numberOfLines={1} style={{ maxWidth: 270 }}>
+            {detecting && !location
+              ? "Detecting your location…"
+              : location
+                ? location.fullAddress || location.city || "Location set"
+                : "Set your location"}
           </Txt>
-          <Ionicons name="chevron-down" size={14} color={colors.textOnInk} />
+          <Ionicons name="chevron-down" size={13} color="rgba(255,255,255,0.6)" />
         </Pressable>
 
-        {/* Search */}
         <View style={styles.searchBar}>
-          <Ionicons name="search" size={18} color={colors.textFaint} />
+          <Ionicons name="search" size={17} color={colors.textFaint} />
           <TextInput
             placeholder="Search AC, fridge, electrician…"
             placeholderTextColor={colors.textFaint}
@@ -86,7 +92,7 @@ export default function Home() {
           />
           {search ? (
             <Pressable onPress={() => setSearch("")} hitSlop={8}>
-              <Ionicons name="close-circle" size={18} color={colors.textFaint} />
+              <Ionicons name="close-circle" size={17} color={colors.textFaint} />
             </Pressable>
           ) : null}
         </View>
@@ -171,17 +177,13 @@ export default function Home() {
                 />
               ))}
             </View>
+
+            {/* Refer & earn — same card as the Account page, closing the feed */}
+            <ReferEarnCard style={{ marginTop: spacing.lg }} />
           </>
         )}
       </ScrollView>
 
-      <Modal visible={picking} animationType="slide" onRequestClose={() => { setPicking(false); markAsked(); }}>
-        <LocationPicker
-          initial={location}
-          onConfirm={(loc) => { setLocation(loc); setPicking(false); }}
-          onClose={() => { setPicking(false); markAsked(); }}
-        />
-      </Modal>
     </View>
   );
 }
@@ -262,23 +264,17 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: colors.ink,
     paddingHorizontal: spacing.xl,
-    paddingBottom: spacing.xl,
-    borderBottomLeftRadius: radii.xxl,
-    borderBottomRightRadius: radii.xxl,
-    ...shadow.lifted,
+    paddingBottom: spacing.lg,
+    borderBottomLeftRadius: radii.xl,
+    borderBottomRightRadius: radii.xl,
   },
-  locChip: {
-    flexDirection: "row", alignItems: "center", gap: 4, alignSelf: "flex-start",
-    paddingVertical: 5, paddingHorizontal: spacing.sm,
-    borderRadius: radii.pill, backgroundColor: "rgba(255,255,255,0.12)",
-  },
+  locRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5, alignSelf: "center" },
   searchBar: {
     flexDirection: "row", alignItems: "center", gap: 8,
-    backgroundColor: colors.surface, borderRadius: radii.lg,
-    paddingHorizontal: spacing.lg, height: 50, marginTop: spacing.lg,
-    ...shadow.card,
+    backgroundColor: colors.surface, borderRadius: radii.md,
+    paddingHorizontal: spacing.md, height: 46, marginTop: spacing.md,
   },
-  searchInput: { flex: 1, fontSize: font.size.md, color: colors.text, paddingVertical: 0 },
+  searchInput: { flex: 1, fontSize: font.size.base, color: colors.text, paddingVertical: 0 },
 
   // Bleeds full-width past the screen's own padding so the row can scroll
   // edge to edge; contentContainerStyle re-adds the padding as scrollable

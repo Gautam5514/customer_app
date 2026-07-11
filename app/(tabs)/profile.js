@@ -1,32 +1,18 @@
-import React, { useState } from "react";
+import React from "react";
 import { View, StyleSheet, ScrollView, Pressable, Alert } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { Txt, Row, Card } from "../../src/components/ui";
+import { Txt, Row } from "../../src/components/ui";
 import { SignInPrompt } from "../../src/components/SignInPrompt";
+import { ReferEarnCard } from "../../src/components/ReferEarnCard";
 import { useAuth } from "../../src/store/auth";
-import { useLightStatusBar } from "../../src/lib/useStatusBar";
-import { initials } from "../../src/lib/format";
-import { colors, spacing, font, radii, shadow } from "../../src/theme";
+import { colors, spacing, font, radii } from "../../src/theme";
 
 export default function Profile() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user, signOut } = useAuth();
-
-  // The dark header scrolls away with the page, so a permanently-"light"
-  // status bar would go invisible (white icons) once white content scrolls
-  // underneath it. Flip to dark the moment the header's height scrolls past.
-  const [headerHeight, setHeaderHeight] = useState(0);
-  const [pastHeader, setPastHeader] = useState(false);
-  useLightStatusBar(!!user && !pastHeader);
-
-  function onScroll(e) {
-    const y = e.nativeEvent.contentOffset.y;
-    const shouldBeDark = headerHeight > 0 && y > headerHeight - insets.top - 12;
-    setPastHeader((prev) => (prev !== shouldBeDark ? shouldBeDark : prev));
-  }
 
   // Guests see the sign-in prompt rather than an empty profile shell. The
   // "New here?" walkthrough lives only here (guest view) — once signed in,
@@ -56,24 +42,36 @@ export default function Profile() {
     );
   }
 
-  function confirmSignOut() {
-    Alert.alert("Sign out", "Are you sure you want to sign out?", [
+  const incomplete = !user?.fullName || !user?.phone;
+
+  function confirmLogout() {
+    Alert.alert("Logout", "Are you sure you want to logout?", [
       { text: "Cancel", style: "cancel" },
-      { text: "Sign out", style: "destructive", onPress: () => signOut() },
+      { text: "Logout", style: "destructive", onPress: () => signOut() },
     ]);
   }
 
-  // Fast path — the 3 things a customer opens most, promoted above the fold.
+  function comingSoon(title, icon, blurb) {
+    router.push({ pathname: "/coming-soon", params: { title, icon, blurb } });
+  }
+
+  // Quick cards — the fast path, styled as UC's flat outlined tiles.
   const quick = [
-    { icon: "receipt-outline", label: "My bookings", onPress: () => router.push("/(tabs)/bookings") },
-    { icon: "location-outline", label: "Saved addresses", onPress: () => router.push("/addresses") },
-    { icon: "headset-outline", label: "Help & support", onPress: () => router.push("/help-support") },
+    { icon: "clipboard-outline", label: "My\nbookings", onPress: () => router.push("/(tabs)/bookings") },
+    { icon: "pricetag-outline", label: "Offers &\ncoupons", onPress: () => router.push("/offers") },
+    { icon: "headset-outline", label: "Help &\nsupport", onPress: () => router.push("/help-support") },
   ];
 
-  // Everything else — one tap away, grouped in a single settings list.
+  // The account menu — UC's list, mapped to real screens where they exist.
   const menu = [
-    { icon: "pricetag-outline", label: "Offers & coupons", onPress: () => router.push("/offers") },
+    { icon: "reader-outline", label: "My Plans", onPress: () => comingSoon("My Plans", "reader-outline", "Service plans tailored to your home, with member pricing on every booking.") },
+    { icon: "wallet-outline", label: "Wallet", onPress: () => comingSoon("Wallet", "wallet-outline", "Add money, track refunds and pay for bookings in a single tap.") },
+    { icon: "disc-outline", label: "Passes & membership", onPress: () => comingSoon("Passes & membership", "disc-outline", "Unlock member-only rates, priority slots and exclusive perks.") },
+    { icon: "star-outline", label: "My rating", onPress: () => comingSoon("My rating", "star-outline", "See how professionals rate their experience working with you.") },
+    { icon: "location-outline", label: "Manage addresses", onPress: () => router.push("/addresses") },
+    { icon: "card-outline", label: "Manage payment methods", onPress: () => comingSoon("Manage payment methods", "card-outline", "Save cards and UPI for a faster, one-tap checkout.") },
     { icon: "shield-checkmark-outline", label: "Privacy & terms", onPress: () => router.push("/privacy-terms") },
+    { icon: "information-circle-outline", label: "About EliteCrew", onPress: () => router.push("/onboarding") },
   ];
 
   return (
@@ -81,89 +79,87 @@ export default function Profile() {
       style={{ flex: 1, backgroundColor: colors.bg }}
       contentContainerStyle={{ paddingBottom: 40 }}
       showsVerticalScrollIndicator={false}
-      onScroll={onScroll}
-      scrollEventThrottle={32}
     >
-      {/* Header */}
-      <View
-        style={[styles.header, { paddingTop: insets.top + spacing.xl }]}
-        onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}
-      >
-        <View style={styles.avatar}>
-          <Txt color={colors.textOnInk} weight={font.weight.heavy} size={font.size.xl}>{initials(user?.fullName) || "U"}</Txt>
-        </View>
-        <Txt color={colors.textOnInk} size={font.size.xl} weight={font.weight.bold} style={{ marginTop: spacing.md }}>{user?.fullName}</Txt>
-        <Txt color="rgba(255,255,255,0.65)" size={font.size.sm} style={{ marginTop: 2 }}>
+      {/* Header — name + phone on plain white, UC style */}
+      <View style={{ paddingTop: insets.top + spacing.lg, paddingHorizontal: spacing.xl }}>
+        {incomplete ? (
+          <Row justify="space-between" style={{ marginBottom: spacing.md }}>
+            <View style={styles.incompletePill}>
+              <Ionicons name="alert-circle" size={15} color={colors.danger} />
+              <Txt color={colors.danger} weight={font.weight.semibold} size={font.size.sm}>Incomplete profile</Txt>
+            </View>
+            <Pressable
+              onPress={() => router.push("/edit-profile")}
+              style={({ pressed }) => [styles.completeBtn, pressed && { backgroundColor: colors.surfaceAlt }]}
+            >
+              <Txt weight={font.weight.semibold} size={font.size.md}>Complete</Txt>
+            </Pressable>
+          </Row>
+        ) : null}
+        <Txt size={30} weight={font.weight.bold} style={{ letterSpacing: -0.4 }}>
+          {user?.fullName || "Your name"}
+        </Txt>
+        <Txt muted size={font.size.md} style={{ marginTop: 6 }}>
           {user?.phone ? `+91 ${user.phone}` : user?.email}
         </Txt>
-      </View>
 
-      <View style={{ padding: spacing.xl }}>
-        {/* Quick actions — the fast path */}
-        <Row gap={spacing.md} style={{ marginBottom: spacing.xl }}>
+        {/* Quick cards */}
+        <Row gap={spacing.md} align="stretch" style={{ marginTop: spacing.xl }}>
           {quick.map((q) => (
             <Pressable
               key={q.label}
               onPress={q.onPress}
               style={({ pressed }) => [styles.quickCard, pressed && { backgroundColor: colors.surfaceAlt }]}
             >
-              <View style={styles.quickIcon}>
-                <Ionicons name={q.icon} size={19} color={colors.ink} />
-              </View>
-              <Txt weight={font.weight.semibold} size={font.size.sm} style={{ marginTop: spacing.sm }}>{q.label}</Txt>
+              <Ionicons name={q.icon} size={26} color={colors.ink} />
+              <Txt size={font.size.md} style={{ marginTop: spacing.md, lineHeight: 23 }}>{q.label}</Txt>
             </Pressable>
           ))}
         </Row>
+      </View>
 
-        {/* Settings list */}
-        <Card padded={false} style={{ overflow: "hidden" }}>
-          {menu.map((it, i) => (
-            <Pressable key={it.label} onPress={it.onPress} style={({ pressed }) => [styles.rowItem, i < menu.length - 1 && styles.rowBorder, pressed && { backgroundColor: colors.surfaceAlt }]}>
-              <View style={styles.itemIcon}><Ionicons name={it.icon} size={19} color={colors.ink} /></View>
-              <Txt weight={font.weight.medium} size={font.size.md} style={{ flex: 1 }}>{it.label}</Txt>
-              <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
-            </Pressable>
-          ))}
-        </Card>
+      {/* Gray band separator, UC style */}
+      <View style={styles.band} />
 
-        {/* Promo — the one live coupon, presented as a tappable highlight card */}
-        <Pressable onPress={() => router.push("/offers")} style={({ pressed }) => [styles.promo, pressed && { opacity: 0.92 }]}>
-          <View style={{ flex: 1 }}>
-            <Txt weight={font.weight.bold} size={font.size.md}>Flat ₹100 off your first booking</Txt>
-            <Txt muted size={font.size.sm} style={{ marginTop: 2, lineHeight: 19 }}>
-              Use code <Txt weight={font.weight.bold} color={colors.ink}>ELITE100</Txt> at checkout
-            </Txt>
-            <View style={styles.promoBtn}>
-              <Txt color={colors.textOnInk} weight={font.weight.bold} size={font.size.sm}>View offers</Txt>
-            </View>
-          </View>
-          <Ionicons name="pricetag" size={26} color={colors.gold} />
+      {/* Account menu — flat rows, thin icons, chevrons */}
+      <View style={{ paddingVertical: spacing.sm }}>
+        {menu.map((it) => (
+          <Pressable
+            key={it.label}
+            onPress={it.onPress}
+            style={({ pressed }) => [styles.menuRow, pressed && { backgroundColor: colors.surfaceAlt }]}
+          >
+            <Ionicons name={it.icon} size={21} color={colors.ink} />
+            <Txt size={font.size.lg} style={{ flex: 1 }}>{it.label}</Txt>
+            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+          </Pressable>
+        ))}
+      </View>
+
+      <View style={{ paddingHorizontal: spacing.xl }}>
+        {/* Refer & earn — purple highlight card with gift, UC style */}
+        <ReferEarnCard style={{ marginTop: spacing.md }} />
+
+        {/* Logout — outlined, red text, UC style */}
+        <Pressable
+          onPress={confirmLogout}
+          style={({ pressed }) => [styles.logout, pressed && { backgroundColor: colors.surfaceAlt }]}
+        >
+          <Txt color={colors.danger} weight={font.weight.semibold} size={font.size.lg}>Logout</Txt>
         </Pressable>
 
-        <Pressable onPress={confirmSignOut} style={({ pressed }) => [styles.signout, pressed && { opacity: 0.8 }]}>
-          <Ionicons name="log-out-outline" size={19} color={colors.danger} />
-          <Txt color={colors.danger} weight={font.weight.semibold}>Sign out</Txt>
-        </Pressable>
-
-        <Txt faint center size={font.size.xs} style={{ marginTop: spacing.xl }}>EliteCrew · v1.0.0</Txt>
+        <Txt faint center size={font.size.sm} style={{ marginTop: spacing.xl }}>Version 1.0.0</Txt>
       </View>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  header: {
-    backgroundColor: colors.ink, alignItems: "center", paddingBottom: spacing.xxl,
-    borderBottomLeftRadius: radii.xxl, borderBottomRightRadius: radii.xxl, paddingHorizontal: spacing.xl,
-    ...shadow.lifted,
-  },
-  avatar: { width: 76, height: 76, borderRadius: 38, backgroundColor: "rgba(255,255,255,0.14)", alignItems: "center", justifyContent: "center" },
   exploreBanner: {
     flexDirection: "row", alignItems: "center", gap: spacing.md,
     backgroundColor: colors.surface, borderRadius: radii.lg, padding: spacing.md,
     marginHorizontal: spacing.xl, marginBottom: spacing.xl,
     borderWidth: 1, borderColor: colors.border,
-    ...shadow.soft,
   },
   exploreIcon: {
     width: 40, height: 40, borderRadius: radii.md,
@@ -171,29 +167,31 @@ const styles = StyleSheet.create({
     alignItems: "center", justifyContent: "center",
   },
 
+  incompletePill: {
+    flexDirection: "row", alignItems: "center", gap: 5,
+    backgroundColor: colors.dangerSoft, borderRadius: radii.pill,
+    paddingHorizontal: 12, paddingVertical: 6,
+  },
+  completeBtn: {
+    borderWidth: 1, borderColor: colors.ink, borderRadius: radii.sm,
+    paddingHorizontal: 18, paddingVertical: 9, backgroundColor: colors.surface,
+  },
+
   quickCard: {
-    flex: 1, borderWidth: 1, borderColor: colors.border, borderRadius: radii.lg,
-    backgroundColor: colors.surface, padding: spacing.md,
-    ...shadow.soft,
-  },
-  quickIcon: {
-    width: 36, height: 36, borderRadius: radii.md, backgroundColor: colors.surfaceAlt,
-    alignItems: "center", justifyContent: "center",
+    flex: 1, borderWidth: 1, borderColor: colors.border, borderRadius: radii.sm,
+    backgroundColor: colors.surface, padding: spacing.lg,
   },
 
-  rowItem: { flexDirection: "row", alignItems: "center", gap: spacing.md, padding: spacing.lg },
-  rowBorder: { borderBottomWidth: 1, borderBottomColor: colors.border },
-  itemIcon: { width: 38, height: 38, borderRadius: radii.md, backgroundColor: colors.surfaceAlt, alignItems: "center", justifyContent: "center" },
+  band: { height: 8, backgroundColor: colors.surfaceSunken, marginTop: spacing.xl },
 
-  promo: {
-    flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: spacing.md,
-    backgroundColor: colors.goldSoft, borderRadius: radii.lg, padding: spacing.lg,
-    marginTop: spacing.xl,
-  },
-  promoBtn: {
-    marginTop: spacing.md, alignSelf: "flex-start", backgroundColor: colors.ink,
-    paddingHorizontal: spacing.lg, paddingVertical: 10, borderRadius: radii.md,
+  menuRow: {
+    flexDirection: "row", alignItems: "center", gap: spacing.lg,
+    paddingHorizontal: spacing.xl, paddingVertical: 17,
   },
 
-  signout: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, marginTop: spacing.xl, paddingVertical: spacing.lg, borderRadius: radii.md, borderWidth: 1, borderColor: colors.dangerSoft, backgroundColor: colors.dangerSoft },
+  logout: {
+    marginTop: spacing.xl, alignItems: "center", justifyContent: "center",
+    borderWidth: 1, borderColor: colors.border, borderRadius: radii.md,
+    paddingVertical: 15, backgroundColor: colors.surface,
+  },
 });

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { View, StyleSheet, ScrollView, Pressable } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -6,6 +6,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Logo } from "../src/components/Logo";
 import { CategoryTile } from "../src/components/CategoryIcon";
 import { Button, Txt, Row, Card } from "../src/components/ui";
+import { useAuth } from "../src/store/auth";
 import { useLightStatusBar } from "../src/lib/useStatusBar";
 import { colors, spacing, font, radii, shadow } from "../src/theme";
 
@@ -45,6 +46,16 @@ const HOW = [
 export default function Onboarding() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { user, booting } = useAuth();
+
+  // Signed-in customers must never be greeted by this pitch on app open. If
+  // this screen mounted as the very first screen (no back history) and a
+  // session exists, bounce straight to the home tabs. Opening it on purpose
+  // (Profile → "About EliteCrew") has back history, so it still shows.
+  const coldStart = !router.canGoBack();
+  useEffect(() => {
+    if (!booting && user && coldStart) router.replace("/(tabs)");
+  }, [booting, user, coldStart]);
 
   // The hero is dark and scrolls away with the page, so the status bar can't
   // stay permanently "light" — once the white sections below scroll under it,
@@ -179,10 +190,14 @@ export default function Onboarding() {
         onLayout={(e) => setFooterHeight(e.nativeEvent.layout.height)}
       >
         <Button title="Explore services" onPress={explore} rightIcon="arrow-forward" />
-        <Pressable onPress={signIn} style={styles.signInLink} hitSlop={8}>
-          <Txt muted size={font.size.sm}>Already a member? <Txt weight={font.weight.semibold} color={colors.ink}>Sign in</Txt></Txt>
-        </Pressable>
-        <Txt faint center size={font.size.xs} style={{ marginTop: 2 }}>No account needed to browse - sign in only when you book.</Txt>
+        {!user ? (
+          <>
+            <Pressable onPress={signIn} style={styles.signInLink} hitSlop={8}>
+              <Txt muted size={font.size.sm}>Already a member? <Txt weight={font.weight.semibold} color={colors.ink}>Sign in</Txt></Txt>
+            </Pressable>
+            <Txt faint center size={font.size.xs} style={{ marginTop: 2 }}>No account needed to browse - sign in only when you book.</Txt>
+          </>
+        ) : null}
       </View>
     </View>
   );

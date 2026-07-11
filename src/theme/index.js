@@ -75,31 +75,14 @@ export const font = {
   },
 };
 
-// Soft, premium elevation — ink-tinted, low-opacity, wide-radius shadows
-// (never a hard drop shadow). Paired with a fine hairline border, this is
-// what gives cards/tiles their "lifted" feel instead of looking flat.
+// Fully flat design — no drop shadows anywhere. Cards and tiles get their
+// definition purely from crisp hairline borders and surface tints. The tokens
+// stay exported (as no-ops) so every `...shadow.x` call site keeps working;
+// don't add shadow values back here.
 export const shadow = {
-  soft: {
-    shadowColor: "#0A0A0A",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  card: {
-    shadowColor: "#0A0A0A",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.08,
-    shadowRadius: 18,
-    elevation: 4,
-  },
-  lifted: {
-    shadowColor: "#0A0A0A",
-    shadowOffset: { width: 0, height: 14 },
-    shadowOpacity: 0.14,
-    shadowRadius: 30,
-    elevation: 10,
-  },
+  soft: {},
+  card: {},
+  lifted: {},
 };
 
 // Maps a booking status to its display label + tone.

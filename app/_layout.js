@@ -48,14 +48,19 @@ function RootNavigator() {
 
   return (
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
+      {/* (tabs) first — it's the anchor route. onboarding must never be the
+          cold-start screen; it's only reached by explicit navigation. */}
+      <Stack.Screen name="(tabs)" />
       <Stack.Screen name="onboarding" />
       <Stack.Screen name="(auth)" />
-      <Stack.Screen name="(tabs)" />
       <Stack.Screen name="category/[cat]" options={{ presentation: "card" }} />
       <Stack.Screen name="service/[slug]" options={{ presentation: "card" }} />
       <Stack.Screen name="booking/new" options={{ presentation: "card" }} />
       <Stack.Screen name="booking/[id]" options={{ presentation: "card" }} />
       <Stack.Screen name="addresses" options={{ presentation: "card" }} />
+      <Stack.Screen name="location" options={{ presentation: "modal" }} />
+      <Stack.Screen name="edit-profile" options={{ presentation: "card" }} />
+      <Stack.Screen name="coming-soon" options={{ presentation: "card" }} />
       <Stack.Screen name="help-support" options={{ presentation: "card" }} />
       <Stack.Screen name="offers" options={{ presentation: "card" }} />
       <Stack.Screen name="privacy-terms" options={{ presentation: "card" }} />

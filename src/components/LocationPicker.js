@@ -294,7 +294,6 @@ const styles = StyleSheet.create({
     flexDirection: "row", alignItems: "center", gap: spacing.xs,
     backgroundColor: colors.bg, borderColor: colors.borderStrong, borderWidth: 1,
     paddingVertical: spacing.sm, paddingHorizontal: spacing.md, borderRadius: radii.pill,
-    ...Platform.select({ android: { elevation: 3 } }),
   },
   sheet: {
     position: "absolute", left: 0, right: 0, bottom: 0,
